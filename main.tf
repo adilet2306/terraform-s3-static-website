@@ -1,9 +1,20 @@
 provider aws {
-    region = "us-east-2"
+    region = var.region
 }
 
+variable region {
+  type        = string
+  default     = "us-east-2"
+  description = "Provide region"
+}
+
+
 resource "aws_s3_bucket" "example" {
-  bucket = "hello-adilet-bucket"
+  bucket = var.bucket_name
+}
+
+variable bucket_name {
+  default = "subdomain"  # provide subdomain as a bucket name
 }
 
 resource "aws_s3_bucket_ownership_controls" "example" {
@@ -34,6 +45,7 @@ resource "aws_s3_bucket_acl" "example" {
 }
 
 resource "aws_s3_object" "object1" {
+  depends_on = [ aws_s3_bucket_acl.example]
   bucket = aws_s3_bucket.example.id
   key    = "index.html"
   source = "index.html"
@@ -42,6 +54,7 @@ resource "aws_s3_object" "object1" {
 }
 
 resource "aws_s3_object" "object2" {
+  depends_on = [ aws_s3_bucket_acl.example]
   bucket = aws_s3_bucket.example.id
   key    = "error.html"
   source = "error.html"
@@ -62,4 +75,13 @@ resource "aws_s3_bucket_website_configuration" "example" {
   }
 
 
+}
+
+
+resource "aws_route53_record" "web" {
+  zone_id = ""    # Provide hosted zone ID
+  name    = var.bucket_name
+  type    = "CNAME"
+  ttl     = "300"
+  records = ["${aws_s3_bucket.example.bucket}.s3-website.${var.region}.amazonaws.com"]
 }
